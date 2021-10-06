@@ -2,6 +2,7 @@ use std::sync::mpsc::channel;
 use std::fmt::Display;
 use std::time::Duration;
 use std::thread;
+use std::sync::{mpsc, Mutex};
 
 pub fn hs_print() {
     println!("hihi");
@@ -387,6 +388,128 @@ impl Iterator for Counter {
             None
         }
     }
+}
+pub fn hs_thread() {
+    //
+    let handle = thread::spawn(|| {
+        // 이제 보니까 이 부분이 파라미터 없는 익명함수였네,
+        for i in 1..10 {
+            println!("hi number {} from the spawned thread!", i);
+            thread::sleep(Duration::from_millis(1));
+        }
+    });
+
+
+    for i in 1..5 {
+        println!("hi number {} from the spawned thread!", i);
+        thread::sleep(Duration::from_millis(1));
+    }
+
+    // 이거 해줘야 끝날때까지 기다린다!
+    handle.join().unwrap();
+}
+pub fn hs_thread1() {
+    let v = vec![1,2,3];
+    // 쓰레드에서 v를 사용하려면 move 키워드를 이용하여 폐쇄?? 해야한다. ( 소유권 이전! -- 스코프의 소유권인가? )
+    let handle = thread::spawn(move || {
+       println!("Here's vector: {:?}", v);
+    });
+    handle.join().unwrap();
+
+    // 아래 코드와 같이 실행하면 에러! move가 만능은 아닌가보다.
+    // let handle1 = thread::spawn(move || {
+    //     println!("Here's vector: {:?}", v);
+    // });
+    // handle1.join().unwrap();
+}
+pub fn hs_thread2() {
+    // 채널을 이용하여 쓰레드간 통신!
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+       let val = String::from("hi");
+        tx.send(val).unwrap();
+    });
+
+    // 쓰레드 핸들러가 없어도 기다리네~!
+    let received = rx.recv().unwrap();
+    println!("God: {}", received);
+}
+pub fn hs_thread3() {
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("hi"),
+            String::from("from"),
+        ];
+        for val in vals {
+            tx.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    for received in rx {
+        println!("God: {}", received);
+    }
+}
+pub fn hs_thread4() {
+    let (tx, rx) = mpsc::channel();
+    let tx1 = tx.clone();
+    // move 키워드 의미가 쓰레드에서 사용하는 외부변수의 소유권을 가지겠다는 뜻인듯?
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("hi"),
+            String::from("from"),
+        ];
+        for val in vals {
+            tx1.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    thread::spawn(move || {
+        let vals = vec![
+            String::from("hi"),
+            String::from("from"),
+        ];
+        for val in vals {
+            tx.send(val).unwrap();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
+    for received in rx {
+        println!("God: {}", received);
+    }
+}
+
+pub fn hs_thread5() {
+    let m = Mutex::new(5);
+    {
+        let mut num = m.lock().unwrap();
+        *num = 6;
+    }
+    println!("m = {:?}", m);
+}
+pub fn hs_thread6() {
+    // 이게 컴파일 되지 않는 이유는.. 이 문제를 스마트 포인터를 활용하여 해결해야 되기 때문에...
+    // 스마트포인터 부터 공부합시다..
+    let counter = Mutex::new(0);
+    let mut handles = vec![];
+
+    for _ in 0..10 {
+        let handle = thread::spawn(move || {
+           let mut num = counter.lock().unwrap();
+            *num += 1;
+        });
+        handles.push(handle)
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!("Result: {}", *counter.lock().unwrap());
 }
 
 pub fn hs_index() {
