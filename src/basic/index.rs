@@ -1,4 +1,5 @@
 use std::sync::mpsc::channel;
+
 use std::fmt::Display;
 use std::time::Duration;
 use std::thread;
@@ -308,8 +309,8 @@ pub fn hs_closures() {
 }
 
 struct Cacher<T>
-where
-    T: Fn(u32) -> u32,
+    where
+        T: Fn(u32) -> u32,
 {
     calculation: T,
     value: Option<u32>,
@@ -317,8 +318,8 @@ where
 
 // 이것도 <T>가 있는 구조체를 구현하기 위해서는 앞에 붙여주어야 하나보다!!
 impl<T> Cacher<T>
-where
-    T: Fn(u32) -> u32,
+    where
+        T: Fn(u32) -> u32,
 {
     fn new(calculation: T) -> Cacher<T> {
         Cacher {
@@ -340,7 +341,7 @@ where
 
 fn generate_workout(intensity: u32, random_number: u32) {
     // 캐셔 구조체에 익명함수를 넘긴다!
-    let mut expensive_result = Cacher::new( |num| {
+    let mut expensive_result = Cacher::new(|num| {
         println!("calculating slowly...");
         thread::sleep(Duration::from_secs(2));
         num
@@ -369,14 +370,17 @@ pub fn hs_closures1() {
     assert_eq!(counter.next(), Some(5));
     assert_eq!(counter.next(), None);
 }
+
 struct Counter {
     count: u32,
 }
+
 impl Counter {
     fn new() -> Counter {
         Counter { count: 0 }
     }
 }
+
 // Iterator 를 Counter 구조체에 구현한다!!
 impl Iterator for Counter {
     type Item = u32;
@@ -389,6 +393,7 @@ impl Iterator for Counter {
         }
     }
 }
+
 pub fn hs_thread() {
     //
     let handle = thread::spawn(|| {
@@ -408,11 +413,12 @@ pub fn hs_thread() {
     // 이거 해줘야 끝날때까지 기다린다!
     handle.join().unwrap();
 }
+
 pub fn hs_thread1() {
-    let v = vec![1,2,3];
+    let v = vec![1, 2, 3];
     // 쓰레드에서 v를 사용하려면 move 키워드를 이용하여 폐쇄?? 해야한다. ( 소유권 이전! -- 스코프의 소유권인가? )
     let handle = thread::spawn(move || {
-       println!("Here's vector: {:?}", v);
+        println!("Here's vector: {:?}", v);
     });
     handle.join().unwrap();
 
@@ -422,12 +428,13 @@ pub fn hs_thread1() {
     // });
     // handle1.join().unwrap();
 }
+
 pub fn hs_thread2() {
     // 채널을 이용하여 쓰레드간 통신!
     let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
-       let val = String::from("hi");
+        let val = String::from("hi");
         tx.send(val).unwrap();
     });
 
@@ -435,6 +442,7 @@ pub fn hs_thread2() {
     let received = rx.recv().unwrap();
     println!("God: {}", received);
 }
+
 pub fn hs_thread3() {
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
@@ -452,6 +460,7 @@ pub fn hs_thread3() {
         println!("God: {}", received);
     }
 }
+
 pub fn hs_thread4() {
     let (tx, rx) = mpsc::channel();
     let tx1 = tx.clone();
@@ -491,25 +500,90 @@ pub fn hs_thread5() {
     }
     println!("m = {:?}", m);
 }
+
 pub fn hs_thread6() {
     // 이게 컴파일 되지 않는 이유는.. 이 문제를 스마트 포인터를 활용하여 해결해야 되기 때문에...
     // 스마트포인터 부터 공부합시다..
-    let counter = Mutex::new(0);
-    let mut handles = vec![];
+    // let counter = Mutex::new(0);
+    // let mut handles = vec![];
+    //
+    // for _ in 0..10 {
+    //     let handle = thread::spawn(move || {
+    //        let mut num = counter.lock().unwrap();
+    //         *num += 1;
+    //     });
+    //     handles.push(handle)
+    // }
+    //
+    // for handle in handles {
+    //     handle.join().unwrap();
+    // }
+    //
+    // println!("Result: {}", *counter.lock().unwrap());
+}
 
-    for _ in 0..10 {
-        let handle = thread::spawn(move || {
-           let mut num = counter.lock().unwrap();
-            *num += 1;
-        });
-        handles.push(handle)
+pub fn hs_smart_pointer() {
+    let b = Box::new(5); // 힙에 할당된다.! 이런 데이터는 스택이 더 적합하다!
+    // 언제 Box를 쓰느냐!?
+    // 1. 컴파일 타임에 크기를 알 수 없는 유형이 있고, 원하는 경우 정확한 크기가 필요한 컨텍스트에서 해당 유형의 값을 사용할때!
+    // 2. 데이터가 많고 소유권을 이전하고 싶지만 그렇게 할 때 데이터가 복사되지 않도록
+    // 3. 가치를 소유하고 싶고 그것이 특정 유형이 아닌 특정 특성을 구현
+
+    // *b == 5 -> true
+    println!("b = {}", b);
+}
+
+enum List {
+    Cons(i32, Box<List>),
+    Nil,
+}
+
+use crate::basic::index::List::{Cons, Nil};
+
+pub fn hs_smart_pointer2() {
+    let list = Cons(1, Box::new(Cons(2, Box::new(Cons(3, Box::new(Nil))))));
+}
+
+pub fn hs_smart_pointer3() {
+    let x = 5;
+    let y = Box::new(x);
+    assert_eq!(5, x);
+    assert_eq!(5, *y);
+}
+
+pub fn hs_smart_pointer4() {
+    // 여기는 Deref 관련 코드를 적자!
+}
+
+pub fn hs_smart_pointer5() {
+    // Drop은 소멸자 같은 역할인가보다.
+    // Drop은 파일이나 네트워크 연결가 같은 리소스를 해제하는 데 사용할 수 있다.
+    // 값이 범위를 벗어날ㄸ
+
+    let c = CustomSmartPointer {
+        data: String::from("my stuff"),
+    };
+    let d = CustomSmartPointer {
+        data: String::from("other stuff"),
+    };
+    println!("CustomSmartPointers created.");
+    // c.drop() 처럼 명시적으로 호출 할 수 없으며, 자동으로 호출되는걸 멈출 수 없다.
+}
+
+use std::rc::Rc;
+pub fn hs_smart_pointer6() {
+    // Rc<T> 는 다중 소유권을 위해 사용된다.
+    //
+}
+
+struct CustomSmartPointer {
+    data: String,
+}
+
+impl Drop for CustomSmartPointer {
+    fn drop(&mut self) {
+        println!("Dropping CustomSmartPointer with data `{}`!", self.data);
     }
-
-    for handle in handles {
-        handle.join().unwrap();
-    }
-
-    println!("Result: {}", *counter.lock().unwrap());
 }
 
 pub fn hs_index() {
